@@ -53,19 +53,24 @@ def main():
         with torch.no_grad():   # enter no grad context
             if is_image_file(args.image):
                 if args.mask and is_image_file(args.mask):
+                    
                     # Test a single masked image with a given mask
                     x = default_loader(args.image)
-                    mask = default_loader(args.mask)
                     x = transforms.Resize(config['image_shape'][:-1])(x)
                     x = transforms.CenterCrop(config['image_shape'][:-1])(x)
+                    x = transforms.ToTensor()(x)
+                    
+                    mask = default_loader(args.mask)
                     mask = transforms.Resize(config['image_shape'][:-1])(mask)
                     mask = transforms.CenterCrop(config['image_shape'][:-1])(mask)
-                    x = transforms.ToTensor()(x)
                     mask = transforms.ToTensor()(mask)[0].unsqueeze(dim=0)
+                    
                     x = normalize(x)
                     x = x * (1. - mask)
                     x = x.unsqueeze(dim=0)
+                    
                     mask = mask.unsqueeze(dim=0)
+                    
                 elif args.mask:
                     raise TypeError("{} is not an image file.".format(args.mask))
                 else:
@@ -91,7 +96,8 @@ def main():
                 netG = Generator(config['netG'], cuda, device_ids)
                 # Resume weight
                 last_model_name = get_model_list(checkpoint_path, "gen", iteration=args.iter)
-                netG.load_state_dict(torch.load(last_model_name))
+                checkpoint = torch.load(last_model_name) if torch.cuda.is_available() else torch.load(last_model_name, map_location=lambda storage, loc: storage)
+                netG.load_state_dict(checkpoint)
                 model_iteration = int(last_model_name[-11:-3])
                 print("Resume from {} at iteration {}".format(checkpoint_path, model_iteration))
 

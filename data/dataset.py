@@ -20,7 +20,7 @@ class Dataset(data.Dataset):
         self.return_name = return_name
 
     def __getitem__(self, index):
-        path = os.path.join(self.data_path, self.samples[index])
+        path = os.path.join(self.data_path, self.samples[index]) if self.data_path not in self.samples[index] else self.samples[index]
         img = default_loader(path)
 
         if self.random_crop:
@@ -50,13 +50,16 @@ class Dataset(data.Dataset):
         Ensures:
             No class is a subdirectory of another.
         """
+
         if sys.version_info >= (3, 5):
             # Faster and available in Python 3.5 and above
             classes = [d.name for d in os.scandir(dir) if d.is_dir()]
         else:
             classes = [d for d in os.listdir(dir) if os.path.isdir(os.path.join(dir, d))]
+        
         classes.sort()
         class_to_idx = {classes[i]: i for i in range(len(classes))}
+        
         samples = []
         for target in sorted(class_to_idx.keys()):
             d = os.path.join(dir, target)
@@ -64,6 +67,8 @@ class Dataset(data.Dataset):
                 continue
             for root, _, fnames in sorted(os.walk(d)):
                 for fname in sorted(fnames):
+                    if "tumor_regions_segmentation/datasets/" in dir and not root.endswith("/01-original"):
+                        continue
                     if is_image_file(fname):
                         path = os.path.join(root, fname)
                         # item = (path, class_to_idx[target])

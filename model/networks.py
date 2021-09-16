@@ -405,7 +405,8 @@ class LocalDis(nn.Module):
         self.device_ids = device_ids
 
         self.dis_conv_module = DisConvModule(self.input_dim, self.cnum)
-        self.linear = nn.Linear(self.cnum*4*8*8, 1)
+        #self.linear = nn.Linear(self.cnum*4*8*8, 1)    # bbox with size [128, 128]
+        self.linear = nn.Linear(self.cnum*4*16*16, 1)  # bbox with size [256, 256]
 
     def forward(self, x):
         x = self.dis_conv_module(x)
@@ -424,7 +425,8 @@ class GlobalDis(nn.Module):
         self.device_ids = device_ids
 
         self.dis_conv_module = DisConvModule(self.input_dim, self.cnum)
-        self.linear = nn.Linear(self.cnum*4*16*16, 1)
+        #self.linear = nn.Linear(self.cnum*4*16*16, 1)  # input images with shape [256, 256, 3]
+        self.linear = nn.Linear(self.cnum*4*40*40, 1)  # input images with shape [640, 640, 3]
 
     def forward(self, x):
         x = self.dis_conv_module(x)
