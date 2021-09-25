@@ -405,11 +405,12 @@ class LocalDis(nn.Module):
         self.device_ids = device_ids
 
         self.dis_conv_module = DisConvModule(self.input_dim, self.cnum)
-        #self.linear = nn.Linear(self.cnum*4*8*8, 1)    # bbox with size [128, 128]
-        self.linear = nn.Linear(self.cnum*4*16*16, 1)  # bbox with size [256, 256]
+        self.linear = nn.Linear(self.cnum*4*8*8, 1)    # bbox with size [128, 128]
+        #self.linear = nn.Linear(self.cnum*4*16*16, 1)  # bbox with size [256, 256]
 
     def forward(self, x):
         x = self.dis_conv_module(x)
+        #print(">>> bbox flattern size: {} -> ".format(x.size(), x.view(x.size()[0], -1).size()))
         x = x.view(x.size()[0], -1)
         x = self.linear(x)
 
@@ -426,10 +427,13 @@ class GlobalDis(nn.Module):
 
         self.dis_conv_module = DisConvModule(self.input_dim, self.cnum)
         #self.linear = nn.Linear(self.cnum*4*16*16, 1)  # input images with shape [256, 256, 3]
-        self.linear = nn.Linear(self.cnum*4*40*40, 1)  # input images with shape [640, 640, 3]
+        self.linear = nn.Linear(self.cnum*4*26*26, 1)  # input images with shape [416, 416, 3]
+        #self.linear = nn.Linear(self.cnum*4*32*32, 1)  # input images with shape [512, 512, 3]
+        #self.linear = nn.Linear(self.cnum*4*40*40, 1)  # input images with shape [640, 640, 3]
 
     def forward(self, x):
         x = self.dis_conv_module(x)
+        #print(">>> input image flattern size: {} => {}".format(x.size(), x.view(x.size()[0], -1).size()))
         x = x.view(x.size()[0], -1)
         x = self.linear(x)
 

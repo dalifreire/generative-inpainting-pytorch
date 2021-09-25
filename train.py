@@ -22,6 +22,10 @@ parser.add_argument('--seed', type=int, help='manual seed')
 
 
 def main():
+
+    torch.autograd.set_detect_anomaly(True)
+    torch.cuda.empty_cache()
+
     args = parser.parse_args()
     config = get_config(args.config)
 
@@ -66,7 +70,8 @@ def main():
         train_dataset = Dataset(data_path=config['train_data_path'],
                                 with_subfolder=config['data_with_subfolder'],
                                 image_shape=config['image_shape'],
-                                random_crop=config['random_crop'])
+                                random_crop=config['random_crop'],
+                                return_name=False)
         # val_dataset = Dataset(data_path=config['val_data_path'],
         #                       with_subfolder=config['data_with_subfolder'],
         #                       image_size=config['image_size'],
@@ -93,7 +98,7 @@ def main():
             trainer_module = trainer
 
         # Get the resume iteration to restart training
-        start_iteration = trainer_module.resume(config['resume']) if config['resume'] else 1
+        start_iteration = trainer_module.resume(checkpoint_dir=checkpoint_path, iteration=config['resume']) if config['resume'] else 1
 
         iterable_train_loader = iter(train_loader)
 
@@ -107,6 +112,7 @@ def main():
                 ground_truth = next(iterable_train_loader)
 
             # Prepare the inputs
+            print("Iteration: '{}'".format(iteration))
             bboxes = random_bbox(config, batch_size=ground_truth.size(0))
             x, mask = mask_image(ground_truth, bboxes, config)
             #vutils.save_image(ground_truth[0], 'examples/x_input.png', padding=0, normalize=True)
@@ -132,7 +138,7 @@ def main():
             trainer_module.optimizer_d.zero_grad()
             losses['d'] = losses['wgan_d'] + losses['wgan_gp'] * config['wgan_gp_lambda']
             losses['d'].backward()
-            trainer_module.optimizer_d.step()
+            #trainer_module.optimizer_d.step() # to avoid "ERROR one of the variables needed for gradient computation has been modified by an inplace operation:"
 
             # Update G
             if compute_g_loss:
@@ -141,7 +147,10 @@ def main():
                               + losses['ae'] * config['ae_loss_alpha'] \
                               + losses['wgan_g'] * config['gan_loss_alpha']
                 losses['g'].backward()
+                trainer_module.optimizer_d.step() # to avoid "ERROR one of the variables needed for gradient computation has been modified by an inplace operation:"
                 trainer_module.optimizer_g.step()
+            else:
+                trainer_module.optimizer_d.step() # to avoid "ERROR one of the variables needed for gradient computation has been modified by an inplace operation:"
 
             # Log and visualization
             log_losses = ['l1', 'ae', 'wgan_g', 'wgan_d', 'wgan_gp', 'g', 'd']
@@ -176,6 +185,8 @@ def main():
             if iteration % config['snapshot_save_iter'] == 0:
                 trainer_module.save_model(checkpoint_path, iteration)
             
+            torch.cuda.empty_cache()
+
     except Exception as e:  # for unexpected error logging
         logger.error("{}".format(e))
         raise e

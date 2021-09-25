@@ -4,6 +4,9 @@ import yaml
 import numpy as np
 from PIL import Image
 
+import skimage.io as sk_io
+import skimage.color as sk_color
+
 import torch.nn.functional as F
 
 
@@ -12,6 +15,30 @@ def pil_loader(path):
     with open(path, 'rb') as f:
         img = Image.open(f)
         return img.convert('RGB')
+
+
+def load_pil_image(path, gray=False, color_model="RGB"):
+
+    with open(path, 'rb') as f:
+
+        if gray:
+            return Image.open(f).convert('L')     # grayscale
+
+        elif color_model == "HSV":
+            # For HSV, 'H' range is [0, 179], 'S' range is [0, 255] and 'V' range is [0, 255]
+            return Image.open(f).convert('HSV')      # hsv
+
+        elif color_model == "LAB":
+            rgb = sk_io.imread(path)
+            if rgb.shape[2] > 3:  # removes the alpha channel
+                rgb = sk_color.rgba2rgb(rgb)
+
+            lab = sk_color.rgb2lab(rgb)
+            # For LAB, 'L' range is [0, 100], 'A' range is [-127, 127] and 'B' range is [-127, 127]
+            lab_scaled = ((lab + [0, 128, 128]) / [100, 255, 255])*255
+            return Image.fromarray(lab_scaled.astype(np.uint8))
+
+        return Image.open(f).convert('RGB')    # rgb
 
 
 def default_loader(path):

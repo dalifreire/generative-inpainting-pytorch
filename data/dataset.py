@@ -1,7 +1,7 @@
 import sys
 import torch.utils.data as data
 from os import listdir
-from utils.tools import default_loader, is_image_file, normalize
+from utils.tools import default_loader, is_image_file, load_pil_image, normalize
 import os
 
 import torchvision.transforms as transforms
@@ -22,6 +22,7 @@ class Dataset(data.Dataset):
     def __getitem__(self, index):
         path = os.path.join(self.data_path, self.samples[index]) if self.data_path not in self.samples[index] else self.samples[index]
         img = default_loader(path)
+        #img = load_pil_image(path=path, color_model="LAB" if "tumor_regions_segmentation/datasets/" in path else "RGB")
 
         if self.random_crop:
             imgw, imgh = img.size

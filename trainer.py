@@ -17,6 +17,7 @@ class Trainer(nn.Module):
         self.config = config
         self.use_cuda = self.config['cuda']
         self.device_ids = self.config['gpu_ids']
+        #self.device = torch.device("cuda" if torch.cuda.is_available() else "cpu") if self.use_cuda else "cpu"
 
         self.netG = Generator(self.config['netG'], self.use_cuda, self.device_ids)
         self.localD = LocalDis(self.config['netD'], self.use_cuda, self.device_ids)
@@ -28,6 +29,9 @@ class Trainer(nn.Module):
         self.optimizer_d = torch.optim.Adam(d_params, lr=config['lr'],
                                             betas=(self.config['beta1'], self.config['beta2']))
         if self.use_cuda:
+            #self.netG.to(self.device)
+            #self.localD.to(self.device)
+            #self.globalD.to(self.device)
             self.netG.to(self.device_ids[0])
             self.localD.to(self.device_ids[0])
             self.globalD.to(self.device_ids[0])
@@ -133,19 +137,22 @@ class Trainer(nn.Module):
                     'dis': self.optimizer_d.state_dict()}, opt_name)
 
     def resume(self, checkpoint_dir, iteration=0, test=False):
+
         # Load generators
         last_model_name = get_model_list(checkpoint_dir, "gen", iteration=iteration)
-        self.netG.load_state_dict(torch.load(last_model_name))
+        print(last_model_name)
+        state_dict = torch.load(last_model_name) if torch.cuda.is_available() else torch.load(last_model_name, map_location=lambda storage, loc: storage)
+        self.netG.load_state_dict(state_dict)
         iteration = int(last_model_name[-11:-3])
 
         if not test:
             # Load discriminators
             last_model_name = get_model_list(checkpoint_dir, "dis", iteration=iteration)
-            state_dict = torch.load(last_model_name)
+            state_dict = torch.load(last_model_name) if torch.cuda.is_available() else torch.load(last_model_name, map_location=lambda storage, loc: storage)
             self.localD.load_state_dict(state_dict['localD'])
             self.globalD.load_state_dict(state_dict['globalD'])
             # Load optimizers
-            state_dict = torch.load(os.path.join(checkpoint_dir, 'optimizer.pt'))
+            state_dict = torch.load(os.path.join(checkpoint_dir, 'optimizer.pt')) if torch.cuda.is_available() else torch.load(os.path.join(checkpoint_dir, 'optimizer.pt'), map_location=lambda storage, loc: storage)
             self.optimizer_d.load_state_dict(state_dict['dis'])
             self.optimizer_g.load_state_dict(state_dict['gen'])
 
